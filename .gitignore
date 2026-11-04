@@ -1,0 +1,37 @@
+# ---- 依赖与环境 ----
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# ---- 本地配置与密钥（绝不进仓库）----
+.env
+.env.local
+*.pem
+*.key
+*.crt
+
+# ---- 运行时生成的数据与索引 ----
+*.db
+*.sqlite3
+*.dump
+*.sql
+*.log
+logs/
+chroma_db/
+None/
+uploads/
+__pycache__/
+
+# ---- 编辑器与系统 ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- 本地私有目录（个人排查脚本、面试资料，不公开）----
+_recover/
+_面试资料/

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>客户提问审核</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}?v=2">
+    <style>
+        :root { --ink-1:#111111; --ink-2:#2d2d2d; --ink-3:#717171; --line: rgba(17,17,17,0.08); }
+        body { background: linear-gradient(180deg, #ffffff 0%, #f4f4f1 100%); color: var(--ink-1); font-family: "Segoe UI Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
+        .page { max-width: 1160px; margin: 0 auto; padding: 28px 20px 40px; }
+        .hero { margin-bottom: 14px; padding: 18px 20px; border-radius: 24px; border: 1px solid var(--line); background: rgba(255,255,255,0.78); box-shadow: 0 14px 30px rgba(17,17,17,0.05); display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+        .panel { background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,247,244,0.96)); border: 1px solid var(--line); border-radius: 24px; box-shadow: 0 16px 34px rgba(17,17,17,0.06); padding: 24px; }
+        .item { border:1px solid var(--line); border-radius:16px; padding:14px; background:#fff; margin-bottom:10px; }
+        .item:last-child { margin-bottom: 0; }
+        .meta { color: var(--ink-3); font-size: 13px; }
+        .row { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+        .btn { border:0; border-radius:999px; min-height:36px; padding:0 14px; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+        .btn-soft { background:#fff; color:var(--ink-1); border:1px solid var(--line); }
+        .btn-dark { background:#111; color:#fff; }
+        .row > div:first-child { min-width: 0; }
+        .row strong { word-break: break-word; }
+        @media (max-width: 960px) {
+            .page { padding: 18px 14px 24px; }
+            .hero, .panel { border-radius: 20px; }
+            .hero { padding: 14px 16px; }
+            .brand { flex-direction: column; align-items: flex-start; }
+            .row { flex-direction: column; align-items: flex-start; }
+            .row > div:last-child { width: 100%; display:grid; grid-template-columns: 1fr; gap:8px; }
+            .row .btn { width: 100%; }
+        }
+        @media (max-width: 640px) {
+            .brand h2 { font-size: 22px; }
+            .item { padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="hero">
+            <div class="brand">
+                {{ tenant_brand_html|safe }}
+                <div>
+                    <h2 style="margin:0;">客户提问审核</h2>
+                    <div class="meta">{{ tenant_name }} · 待审核</div>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <a class="btn btn-soft" href="{{ url_for('manage_qa') }}">返回知识库管理</a>
+                {% if role == 'admin' %}
+                <a class="btn btn-soft" href="{{ url_for('review_users') }}">用户审核</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="panel">
+            {% if not items %}
+                <div class="meta">当前没有待审核的客户提问。</div>
+            {% else %}
+                {% for item in items %}
+                <div class="item">
+                    <div class="row">
+                        <div>
+                            <div><strong>#{{ item.display_no or item.id }} {{ item.question }}</strong></div>
+                            <div class="meta">提问人：{{ item.author or '客户' }} · 分类：{{ item.category or '未分类' }}</div>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <a class="btn btn-dark" href="{{ url_for('reply_customer_question', qa_id=item.id) }}">回复客户</a>
+                            <a class="btn btn-soft" href="{{ url_for('edit_qa', qa_id=item.id) }}">编辑后入库</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    {% include '_mobile_nav.html' %}
+</body>
+</html>

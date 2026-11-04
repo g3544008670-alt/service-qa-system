@@ -1,0 +1,12 @@
+flask
+flask_sqlalchemy
+flask_login
+psycopg2-binary
+scikit-learn
+numpy
+greenlet==3.2.4
+werkzeug
+python-dotenv
+openpyxl
+bcrypt
+chromadb

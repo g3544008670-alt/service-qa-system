@@ -1,0 +1,32 @@
+<nav class="mobile-nav">
+    <a href="{{ url_for('chat_page') }}" class="{% if request.endpoint in ('chat_page', 'index') %}active{% endif %}">
+        <span class="nav-icon">◇</span>
+        <span>问答</span>
+    </a>
+    {% if session.get('role') in ('admin', 'employee') %}
+    <a href="{{ url_for('manage_qa') }}" class="{% if request.endpoint in ('manage_qa', 'add_page', 'edit_qa') %}active{% endif %}">
+        <span class="nav-icon">□</span>
+        <span>知识库</span>
+    </a>
+    {% endif %}
+    {% if session.get('role') == 'customer' %}
+    <a href="{{ url_for('customer_inbox') }}" class="{% if request.endpoint == 'customer_inbox' %}active{% endif %}">
+        <span class="nav-icon">⊟</span>
+        <span>收件箱</span>
+    </a>
+    <a href="{{ url_for('submit_page') }}">
+        <span class="nav-icon">+</span>
+        <span>提问</span>
+    </a>
+    {% endif %}
+    {% if session.get('role') in ('admin', 'employee') %}
+    <a href="{{ url_for('ops_center') }}" class="{% if request.endpoint in ('ops_center', 'add_page', 'review_users', 'member_accounts', 'operation_logs_page', 'question_review') %}active{% endif %}">
+        <span class="nav-icon">⊙</span>
+        <span>操作</span>
+    </a>
+    {% endif %}
+    <a href="{{ url_for('logout') }}" data-confirm="确认退出登录吗？">
+        <span class="nav-icon">←</span>
+        <span>退出</span>
+    </a>
+</nav>

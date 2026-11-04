@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>知识库管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}?v=2">
+    <style>
+        :root { --ink-1:#111111; --ink-2:#2d2d2d; --ink-3:#717171; --line: rgba(17,17,17,0.08); }
+        body { background:
+            radial-gradient(circle at 0 0, rgba(0,0,0,0.04), transparent 28%),
+            radial-gradient(circle at 100% 0, rgba(0,0,0,0.03), transparent 22%),
+            linear-gradient(180deg, #ffffff 0%, #f4f4f1 100%);
+        }
+        .page { max-width: 1540px; }
+        .header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 18px; padding: 20px 22px; border:1px solid var(--line); border-radius: 28px; background: rgba(255,255,255,0.78); box-shadow: 0 14px 30px rgba(17,17,17,0.05); backdrop-filter: blur(14px); }
+        .header h1 { margin: 0; font-size: 30px; letter-spacing: -0.05em; font-weight: 900; }
+        .header .meta { color: var(--ink-3); font-size: 14px; margin-top: 4px; }
+        .panel { background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,247,244,0.96)); border: 1px solid var(--line); box-shadow: 0 16px 36px rgba(17,17,17,0.06); border-radius: 28px; padding: 22px; backdrop-filter: blur(8px); }
+        .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+        .stat { background: linear-gradient(180deg, #ffffff, #f8f8f6); border: 1px solid var(--line); border-radius: 18px; padding: 16px; box-shadow: 0 8px 18px rgba(17,17,17,0.04); }
+        .stat .label { color: var(--ink-3); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+        .stat .value { font-size: 30px; font-weight: 900; margin-top: 6px; letter-spacing: -0.04em; }
+        .section-title { font-size: 18px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.03em; }
+        .toolbar { display: grid; grid-template-columns: 1.5fr .7fr .7fr auto auto; gap: 10px; margin-bottom: 18px; }
+        .toolbar input, .toolbar select, .upload-row input { border-radius: 14px; border: 1px solid rgba(17,17,17,0.10); padding: 12px 14px; background: rgba(255,255,255,0.95); }
+        .upload-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-bottom: 18px; }
+        .qa-actions { display:flex; gap:8px; flex-wrap:wrap; }
+        @media (max-width: 720px) {
+            .table-wrap { overflow: visible; border: 0; box-shadow: none; }
+            table, thead, tbody, tr, th, td { display: block; width: 100%; }
+            thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+            tbody tr {
+                background: #fff;
+                border: 1px solid rgba(17,17,17,0.08);
+                border-radius: 18px;
+                padding: 4px 14px;
+                margin-bottom: 12px;
+                box-shadow: 0 10px 24px rgba(17,17,17,0.04);
+            }
+            tbody td {
+                padding: 12px 0;
+                border-top: 1px solid rgba(17,17,17,0.08);
+                white-space: normal;
+            }
+            tbody td:first-child { border-top: 0; }
+            tbody td::before {
+                content: attr(data-label);
+                display: block;
+                color: var(--ink-3);
+                font-size: 12px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: .04em;
+                margin-bottom: 6px;
+            }
+            tbody td,
+            tbody td * { max-width: 100%; }
+            .qa-actions { width: 100%; flex-direction: column; }
+            .qa-actions .btn,
+            .qa-actions form { width: 100%; }
+            .qa-actions form .btn { width: 100%; }
+            .qa-answer { max-width: none; }
+            .qa-answer img { max-width: 100% !important; }
+            .stats { grid-template-columns: 1fr; }
+            .header h1 { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="header">
+            <div class="brand">
+                {{ tenant_brand_html|safe }}
+                <div>
+                    <h1>知识库管理</h1>
+                    <div class="meta">{{ tenant_name }} · {{ role }}</div>
+                </div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a class="btn btn-soft" href="{{ url_for('chat_page') }}">返回聊天</a>
+                {% if can_edit_qa %}
+                <a class="btn btn-primary" href="{{ url_for('add_page') }}">录入</a>
+                {% endif %}
+                {% if role == 'admin' %}
+                <a class="btn btn-soft" href="{{ url_for('operation_logs_page') }}">操作日志{% if new_log_count and new_log_count > 0 %} ({{ new_log_count }}){% endif %}</a>
+                {% endif %}
+                <a class="btn btn-soft" href="{{ url_for('question_review') }}">客户提问审核{% if pending_customer_count and pending_customer_count > 0 %} ({{ pending_customer_count }}){% endif %}</a>
+                {% if role == 'admin' %}
+                <a class="btn btn-soft" href="{{ url_for('review_users') }}">用户</a>
+                <a class="btn btn-soft" href="{{ url_for('member_accounts') }}">账号管理</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="panel">
+            {% with messages = get_flashed_messages() %}
+    <script id="flash-data" type="application/json">{{ messages | tojson | safe }}</script>
+    {% endwith %}
+
+            <div class="stats">
+                <div class="stat"><div class="label">总问答数</div><div class="value">{{ total }}</div></div>
+                <div class="stat"><div class="label">当前页</div><div class="value">{{ page }} / {{ total_pages }}</div></div>
+                <div class="stat"><div class="label">每页数量</div><div class="value">{{ per_page }}</div></div>
+                <div class="stat"><div class="label">检索关键词</div><div class="value">{{ keyword if keyword else '全部' }}</div></div>
+            </div>
+
+                <div class="section-title">筛选与导入</div>
+            <form class="toolbar" method="get" action="{{ url_for('manage_qa') }}">
+                <input type="text" name="q" value="{{ keyword }}" placeholder="搜索问题或答案">
+                <select name="category" onchange="this.form.submit()">
+                    <option value="">所有分类</option>
+                    {% for c in categories %}
+                    <option value="{{ c }}" {% if c|trim|lower == filter_category|trim|lower %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+                <select name="status" onchange="this.form.submit()">
+                    <option value="" {% if not filter_status %}selected{% endif %}>全部状态</option>
+                    <option value="pending" {% if filter_status == 'pending' %}selected{% endif %}>待审核</option>
+                    <option value="approved" {% if filter_status == 'approved' %}selected{% endif %}>已通过</option>
+                </select>
+                <select name="per_page">
+                    <option value="10" {% if per_page == 10 %}selected{% endif %}>每页 10 条</option>
+                    <option value="20" {% if per_page == 20 %}selected{% endif %}>每页 20 条</option>
+                    <option value="50" {% if per_page == 50 %}selected{% endif %}>每页 50 条</option>
+                </select>
+                <button class="btn btn-primary" type="submit">筛选</button>
+                <a class="btn btn-soft" href="{{ url_for('manage_qa') }}">重置</a>
+            </form>
+
+                {% if can_edit_qa %}
+                <form class="upload-row" action="{{ url_for('import_qa') }}" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                <input type="file" name="file" accept=".csv,.xlsx,.xlsm" required>
+                <button class="btn btn-outline-dark" type="submit">批量导入 CSV / Excel</button>
+            </form>
+                {% endif %}
+
+            <div class="section-title">问答列表</div>
+            <div class="table-wrap">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 60px;">编号</th>
+                            <th>问题</th>
+                            <th>答案</th>
+                            <th style="width: 120px;">回答者</th>
+                            <th style="width: 120px;">分类</th>
+                            <th style="width: 110px;">权限</th>
+                            <th style="width: 110px;">状态</th>
+                            <th style="width: 220px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for qa in page_items %}
+                        <tr>
+                            <td data-label="编号">#{{ qa.display_no or qa.id }}</td>
+                            <td class="qa-question" data-label="问题">{{ qa.question }}</td>
+                            {% set qa_images = qa.images if qa.images is defined and qa.images else ([qa.image] if qa.image else []) %}
+                            <td class="qa-answer" data-label="答案">
+                                {{ qa.answer | truncate(120, True, '...') }}
+                                {% if qa_images %}
+                                    <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
+                                        {% for img in qa_images[:3] %}
+                                            <img src="{{ img }}" style="max-height:64px; max-width:140px; border-radius:8px; border:1px solid rgba(0,0,0,0.06);">
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td class="qa-author" data-label="回答者">{{ qa.author or '奶龙' }}</td>
+                            <td data-label="分类">{{ qa.category or '未分类' }}</td>
+                            <td data-label="权限">
+                                {% if qa.public %}
+                                    <span class="badge rounded-pill badge-public">公开</span>
+                                {% else %}
+                                    <span class="badge rounded-pill badge-private">内部</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="状态">
+                                {% if qa.approved %}
+                                    <span class="badge rounded-pill badge-approved">已通过</span>
+                                {% else %}
+                                    <span class="badge rounded-pill badge-pending">待审核</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="操作">
+                                <div class="qa-actions">
+                                    {% if can_edit_qa %}
+                                    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('edit_qa', qa_id=qa.id) }}">编辑</a>
+                                    {% if not qa.approved %}
+                                    <a class="btn btn-sm btn-outline-dark" href="{{ url_for('reply_customer_question', qa_id=qa.id) }}">回复客户</a>
+                                    {% endif %}
+                                    <form method="post" action="{{ url_for('delete_qa', qa_id=qa.id) }}" data-confirm="确认删除这条问答吗？">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">删除</button>
+                                    </form>
+                                    {% if role == 'admin' and not qa.approved %}
+                                    <form method="post" action="{{ url_for('approve_qa', qa_id=qa.id) }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                                        <button class="btn btn-sm btn-outline-success" type="submit">通过</button>
+                                    </form>
+                                    <form method="post" action="{{ url_for('reject_qa', qa_id=qa.id) }}" style="display:inline;" data-confirm="拒绝后该条将被删除，确认吗？">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                                        <button class="btn btn-sm btn-outline-dark" type="submit">拒绝</button>
+                                    </form>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="text-muted" style="font-size:12px;">仅可查看</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not page_items %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-5">没有找到符合条件的问答</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <nav class="mt-3">
+                <ul class="pagination justify-content-center flex-wrap">
+                    <li class="page-item {% if page <= 1 %}disabled{% endif %}"><a class="page-link" href="{{ url_for('manage_qa', page=page-1, per_page=per_page, q=keyword, category=filter_category, status=filter_status) }}">上一页</a></li>
+                    {% for p in pages %}
+                    <li class="page-item {% if p == page %}active{% endif %}"><a class="page-link" href="{{ url_for('manage_qa', page=p, per_page=per_page, q=keyword, category=filter_category, status=filter_status) }}">{{ p }}</a></li>
+                    {% endfor %}
+                    <li class="page-item {% if page >= total_pages %}disabled{% endif %}"><a class="page-link" href="{{ url_for('manage_qa', page=page+1, per_page=per_page, q=keyword, category=filter_category, status=filter_status) }}">下一页</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% include '_mobile_nav.html' %}
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

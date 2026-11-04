@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>超级账号控制台</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}?v=2">
+    <style>
+        :root {
+            --bg-1: #070707;
+            --bg-2: #0f0f0f;
+            --bg-3: #171717;
+            --line: rgba(255,255,255,0.09);
+            --line-strong: rgba(255,255,255,0.18);
+            --text-strong: #f5f5f5;
+            --text-soft: rgba(245,245,245,0.72);
+            --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--text-strong);
+            background:
+                radial-gradient(circle at 12% 15%, rgba(255,255,255,0.08), transparent 28%),
+                radial-gradient(circle at 84% 9%, rgba(255,255,255,0.07), transparent 26%),
+                linear-gradient(165deg, var(--bg-1), var(--bg-2) 48%, var(--bg-3));
+            font-family: "Segoe UI Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        }
+        .page {
+            width: min(1360px, calc(100% - 28px));
+            margin: 0 auto;
+            padding: 24px 0 40px;
+        }
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 18px;
+            align-items: center;
+            padding: 24px 26px;
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            background: linear-gradient(180deg, rgba(14,14,14,0.94), rgba(8,8,8,0.90));
+            box-shadow: var(--shadow);
+            margin-bottom: 14px;
+        }
+        .hero-left {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            min-width: 0;
+        }
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(30px, 4.2vw, 52px);
+            letter-spacing: -0.07em;
+            font-weight: 900;
+            line-height: 1;
+        }
+        .hero .sub {
+            margin-top: 8px;
+            color: var(--text-soft);
+            line-height: 1.6;
+            font-size: 15px;
+        }
+        .hero .meta {
+            margin-top: 8px;
+            color: rgba(245,245,245,0.55);
+            font-size: 13px;
+        }
+        .hero-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+            padding: 0 14px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            text-decoration: none;
+            font-weight: 800;
+            font-size: 13px;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-primary {
+            background: linear-gradient(135deg, #ffffff, #d8d8d8);
+            color: #090909;
+            box-shadow: 0 14px 28px rgba(255,255,255,0.12);
+        }
+        .btn-ghost {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-strong);
+            border-color: var(--line);
+        }
+        .btn-danger {
+            background: rgba(255,255,255,0.06);
+            color: #f3f3f3;
+            border-color: rgba(255,255,255,0.12);
+        }
+        .flash {
+            margin-bottom: 14px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.16);
+            background: rgba(255,255,255,0.06);
+            color: #f5f5f5;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .stat {
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 14px 16px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+            box-shadow: 0 10px 24px rgba(0,0,0,0.20);
+        }
+        .stat .label {
+            color: var(--text-soft);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+        }
+        .stat .value {
+            margin-top: 8px;
+            font-size: 34px;
+            font-weight: 900;
+            letter-spacing: -0.06em;
+            line-height: 1;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(370px, 0.85fr);
+            gap: 16px;
+        }
+        .panel {
+            background: linear-gradient(180deg, rgba(16,16,16,0.92), rgba(8,8,8,0.90));
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            box-shadow: 0 18px 46px rgba(0, 0, 0, 0.36);
+            padding: 18px;
+            min-width: 0;
+        }
+        .panel h2 {
+            margin: 0 0 12px;
+            font-size: 24px;
+            letter-spacing: -0.05em;
+            font-weight: 900;
+        }
+        .tenant-list {
+            display: grid;
+            gap: 10px;
+        }
+        .tenant-card {
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 14px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+            display: grid;
+            gap: 10px;
+        }
+        .tenant-card header {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+        }
+        .tenant-title {
+            margin: 0;
+            font-size: 20px;
+            letter-spacing: -0.05em;
+            font-weight: 900;
+        }
+        .tenant-sub {
+            color: var(--text-soft);
+            font-size: 12px;
+            margin-top: 2px;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            min-height: 28px;
+            padding: 0 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.10);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            border: 1px solid var(--line-strong);
+        }
+        .tenant-meta {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .meta-chip {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 8px 10px;
+            background: rgba(255,255,255,0.03);
+        }
+        .meta-chip .k { color: var(--text-soft); font-size: 11px; }
+        .meta-chip .v { margin-top: 4px; font-size: 13px; font-weight: 700; }
+        .tenant-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .tenant-actions .btn {
+            min-height: 34px;
+            padding: 0 12px;
+        }
+        .tenant-actions .spacer { flex: 1 1 auto; }
+        .tenant-action-note {
+            color: var(--text-soft);
+            font-size: 12px;
+        }
+        .form-grid {
+            display: grid;
+            gap: 10px;
+        }
+        .form-grid input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px 13px;
+            border-radius: 13px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.05);
+            color: var(--text-strong);
+            outline: none;
+        }
+        .form-grid input::placeholder { color: rgba(255,255,255,0.45); }
+        .form-grid input:focus {
+            border-color: rgba(255,255,255,0.35);
+            box-shadow: 0 0 0 4px rgba(255,255,255,0.10);
+        }
+        .form-note {
+            color: var(--text-soft);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .side-section {
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid var(--line);
+        }
+        @media (max-width: 1020px) {
+            .hero { grid-template-columns: 1fr; }
+            .hero-actions { justify-content: flex-start; width: 100%; display: grid; grid-template-columns: 1fr; }
+            .stats { grid-template-columns: 1fr; }
+            .grid { grid-template-columns: 1fr; }
+            .tenant-meta { grid-template-columns: 1fr; }
+            .page { width: min(100%, calc(100% - 20px)); padding: 18px 0 24px; }
+            .hero, .panel { padding: 18px; }
+            .hero-left { flex-direction: column; align-items: flex-start; }
+            .hero-actions .btn { width: 100%; }
+            .tenant-actions {
+                align-items: stretch;
+                display: grid;
+                grid-template-columns: 1fr;
+                width: 100%;
+            }
+            .tenant-actions .btn, .tenant-actions form { width: 100%; }
+            .tenant-actions .spacer { display: none; }
+            .tenant-actions form button { width: 100%; }
+        }
+        @media (max-width: 640px) {
+            .hero h1 { font-size: 26px; }
+            .panel h2 { font-size: 20px; }
+            .tenant-card header { align-items: flex-start; flex-direction: column; }
+            .tenant-title { font-size: 18px; }
+            .stat .value { font-size: 28px; }
+            .hero-actions,
+            .tenant-actions { grid-template-columns: 1fr; }
+            .hero, .panel { padding: 14px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="hero">
+            <div class="hero-left">
+                {{ brand_html|safe }}
+                <div>
+                    <h1>超级账号控制台</h1>
+                    <div class="sub">租户、账号、知识库和品牌配置集中管理。</div>
+                    <div class="meta">当前账号：{{ username }} · 仅允许一个超级账号存在 · 演示公司不可删除</div>
+                </div>
+            </div>
+            <div class="hero-actions">
+                <a class="btn btn-ghost" href="{{ url_for('superadmin_impersonate', tenant_id=1) }}">普通页面</a>
+                <a class="btn btn-ghost" href="{{ url_for('logout') }}" data-confirm="确认退出登录吗？">退出</a>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="flash">{{ messages[0] }}</div>
+          {% endif %}
+        {% endwith %}
+
+        <div class="stats">
+            <div class="stat"><div class="label">租户总数</div><div class="value">{{ tenant_count }}</div></div>
+            <div class="stat"><div class="label">超级账号</div><div class="value">1</div></div>
+            <div class="stat"><div class="label">演示公司</div><div class="value">1</div></div>
+        </div>
+
+        <div class="grid">
+            <section class="panel">
+                <h2>租户列表</h2>
+                <div class="tenant-list">
+                    {% for tenant in tenants %}
+                    <article class="tenant-card">
+                        <header>
+                            <div>
+                                <p class="tenant-title">{{ tenant.name }}</p>
+                                <div class="tenant-sub">slug: {{ tenant.slug }} · id: {{ tenant.id }}</div>
+                            </div>
+                            <span class="badge">{{ tenant.status }}</span>
+                        </header>
+
+                        <div class="tenant-meta">
+                            <div class="meta-chip"><div class="k">用户</div><div class="v">{{ tenant.user_count }}</div></div>
+                            <div class="meta-chip"><div class="k">问答</div><div class="v">{{ tenant.qa_count }}</div></div>
+                            <div class="meta-chip"><div class="k">创建时间</div><div class="v">{{ tenant.created_at }}</div></div>
+                        </div>
+
+                        <div class="tenant-actions">
+                            <a class="btn btn-ghost" href="{{ url_for('superadmin_tenant_users', tenant_id=tenant.id) }}">用户</a>
+                            <a class="btn btn-ghost" href="{{ url_for('superadmin_tenant_qa', tenant_id=tenant.id) }}">问答</a>
+                            <a class="btn btn-ghost" href="{{ url_for('tenant_branding', tenant_id=tenant.id) }}">品牌</a>
+                            <a class="btn btn-ghost" href="{{ url_for('superadmin_impersonate', tenant_id=tenant.id) }}">打开</a>
+                            <span class="spacer"></span>
+                            {% if tenant.id != 1 %}
+                            <form method="post" action="{{ url_for('delete_tenant', tenant_id=tenant.id) }}" data-confirm="确认删除这个租户吗？该租户的问答、附件和租户用户都会一起删除。">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                                <button class="btn btn-danger" type="submit">删除租户</button>
+                            </form>
+                            {% else %}
+                            <span class="tenant-action-note">演示公司受保护，承载当前迁移数据。</span>
+                            {% endif %}
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="panel">
+                <h2>创建租户</h2>
+                <form class="form-grid" method="post" action="{{ url_for('create_tenant') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                    <input type="text" name="tenant_name" placeholder="租户名称，例如：华东事业部" required>
+                    <input type="text" name="admin_username" placeholder="租户管理员用户名（可留空自动生成）">
+                    <input type="text" name="admin_password" placeholder="租户管理员密码（可留空自动生成）">
+                    <button class="btn btn-primary" type="submit">创建租户并生成管理员</button>
+                </form>
+                <p class="form-note" style="margin-top:12px;">新租户会自动生成管理员；手填密码时需满足平台密码规则。</p>
+
+                <div class="side-section">
+                    <h2>超级账号</h2>
+                    <p class="form-note">登录名固定为 <strong>{{ superadmin_username }}</strong>。密码由环境变量 <strong>SUPERADMIN_PASSWORD</strong> 提供，建议只在受控环境使用。</p>
+                </div>
+            </section>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    {% include '_mobile_nav.html' %}
+</body>
+</html>

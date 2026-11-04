@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>租户用户 - {{ tenant.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}?v=2">
+</head>
+<body>
+<div class="page">
+    <h1>租户用户：{{ tenant.name }} (id: {{ tenant.id }})</h1>
+    <p><a href="{{ url_for('superadmin_dashboard') }}">返回超管控制台</a> · <a href="{{ url_for('superadmin_stop_impersonate') }}">停止以租户身份打开</a></p>
+    <table border="1" cellpadding="8" cellspacing="0">
+        <thead>
+            <tr><th>用户名</th><th>角色</th><th>状态</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td>{{ u.username }}</td>
+                <td>{{ u.role }}</td>
+                <td>{{ u.status }}</td>
+                <td>
+                    {% if u.username != superadmin_username %}
+                    <form method="post" action="{{ url_for('superadmin_delete_user', tenant_id=tenant.id, username=u.username) }}" data-confirm="确认删除用户 {{ u.username }} ?" style="display:inline-block;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                        <button type="submit">删除用户</button>
+                    </form>
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    {% include '_mobile_nav.html' %}
+</body>
+</html>

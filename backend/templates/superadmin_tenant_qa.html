@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>租户问答 - {{ tenant.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}?v=2">
+</head>
+<body>
+<div class="page">
+    <h1>租户问答：{{ tenant.name }} (id: {{ tenant.id }})</h1>
+    <p><a href="{{ url_for('superadmin_dashboard') }}">返回超管控制台</a> · <a href="{{ url_for('superadmin_stop_impersonate') }}">停止以租户身份打开</a></p>
+    <table border="1" cellpadding="8" cellspacing="0">
+        <thead>
+            <tr><th>问答编号</th><th>问题</th><th>答案</th><th>创建时间</th></tr>
+        </thead>
+        <tbody>
+            {% for item in qa %}
+            <tr>
+                <td>{{ item.display_no or item.id }}</td>
+                <td>{{ item.question }}</td>
+                <td>{{ item.answer }}</td>
+                <td>{{ item.created_at }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    {% include '_mobile_nav.html' %}
+</body>
+</html>

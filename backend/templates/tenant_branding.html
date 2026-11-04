@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LOGO</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}?v=2">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+    <style>
+        :root { --ink-1:#111111; --ink-2:#2d2d2d; --ink-3:#717171; --line: rgba(17,17,17,0.08); }
+        body { background: linear-gradient(180deg, #ffffff 0%, #f4f4f1 100%); color: var(--ink-1); font-family: "Segoe UI Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
+        .page { max-width: 980px; margin: 0 auto; padding: 28px 20px 40px; }
+        .hero { margin-bottom: 14px; padding: 18px 20px; border-radius: 24px; border: 1px solid var(--line); background: rgba(255,255,255,0.78); box-shadow: 0 14px 30px rgba(17,17,17,0.05); display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; }
+        .panel { background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,247,244,0.96)); border: 1px solid var(--line); border-radius: 24px; box-shadow: 0 16px 34px rgba(17,17,17,0.06); padding: 24px; }
+        .preview-top { min-height: 200px; border: 1px solid rgba(17,17,17,0.10); border-radius: 22px; overflow: hidden; background: linear-gradient(180deg, #ffffff, #fafaf8); margin-bottom: 16px; display:flex; align-items:center; justify-content:center; padding: 8px; }
+        .preview-top img { width: 100%; height: 100%; object-fit: contain; display:block; background: transparent; }
+        .preview-avatar { display:flex; align-items:center; gap:12px; margin-bottom: 18px; }
+        .preview-avatar .avatar { width: 72px; height: 72px; border-radius: 14px; overflow:hidden; border:1px solid rgba(17,17,17,0.10); background: linear-gradient(180deg, #ffffff, #fafaf8); display:flex; align-items:center; justify-content:center; padding: 4px; }
+        .preview-avatar img { width:100%; height:100%; object-fit:contain; display:block; background:transparent; }
+        .muted { color: var(--ink-3); font-size: 13px; }
+        .form-grid { display:grid; gap:12px; }
+        .field { display:grid; gap:8px; }
+        .field input { width:100%; box-sizing:border-box; padding:12px 14px; border-radius:14px; border:1px solid rgba(17,17,17,0.10); background:#fff; }
+        .btn { border:0; border-radius:999px; min-height:40px; padding:0 16px; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+        .btn-primary { background: linear-gradient(135deg, #111111, #363636); color:#fff; }
+        .btn-soft { background:#fff; color:var(--ink-1); border:1px solid var(--line); }
+        .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top: 4px; }
+        .upload-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+        .upload-actions input[type="file"] { display:none; }
+        .upload-actions label { cursor:pointer; }
+        .crop-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .crop-modal.open { display: flex; }
+        .crop-dialog {
+            width: min(920px, 100%);
+            background: #fff;
+            border-radius: 24px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.28);
+            overflow: hidden;
+        }
+        .crop-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--line);
+        }
+        .crop-stage {
+            min-height: 420px;
+            max-height: 70vh;
+            background: #111;
+            touch-action: none;
+        }
+        .crop-stage img {
+            display: block;
+            max-width: 100%;
+        }
+        .crop-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 12px 18px 0;
+            background: #fff;
+            border-bottom: 1px solid var(--line);
+        }
+        .crop-chip {
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            min-height: 34px;
+            padding: 0 12px;
+            background: #fff;
+            color: var(--ink-1);
+            font-weight: 800;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .crop-chip.active {
+            background: #111;
+            color: #fff;
+            border-color: #111;
+        }
+        .crop-meta {
+            font-size: 12px;
+            color: var(--ink-3);
+            margin-top: 8px;
+        }
+        .crop-foot {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 16px 18px;
+            border-top: 1px solid var(--line);
+            background: #fafaf8;
+        }
+        @media (max-width: 960px) {
+            .page { padding: 18px 14px 24px; }
+            .hero, .panel { border-radius: 20px; }
+            .hero { padding: 14px 16px; }
+            .brand { flex-direction: column; align-items: flex-start; }
+            .actions { width: 100%; }
+            .actions .btn { width: 100%; }
+            .preview-top { min-height: 140px; }
+            .crop-stage { min-height: 300px; }
+            .crop-foot { flex-direction: column; }
+            .crop-foot .btn { width: 100%; }
+            .crop-head { align-items: flex-start; flex-direction: column; }
+        }
+        @media (max-width: 640px) {
+            .preview-avatar { align-items: flex-start; flex-direction: column; }
+            .preview-avatar .avatar { width: 64px; height: 64px; }
+            .crop-stage { min-height: 240px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="hero">
+            <div class="brand">
+                {{ tenant_brand_html|safe }}
+                <div>
+                    <h2 style="margin:0;">LOGO</h2>
+                    <div class="muted">{{ tenant_name }} · 独立配置头像和顶部图片</div>
+                </div>
+            </div>
+            <div class="actions">
+                {% if superadmin_mode %}
+                <a class="btn btn-soft" href="{{ url_for('superadmin_dashboard') }}">返回控制台</a>
+                {% else %}
+                <a class="btn btn-soft" href="{{ url_for('chat_page') }}">返回聊天</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="panel">
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                <div class="muted" style="margin-bottom:12px;">{{ messages[0] }}</div>
+              {% endif %}
+            {% endwith %}
+
+            <div class="preview-top">
+                {% if tenant_top_image %}
+                <img src="{{ tenant_top_image }}" alt="顶部图片预览" id="topPreview">
+                {% else %}
+                <div class="muted">顶部图片区位</div>
+                {% endif %}
+            </div>
+
+            <div class="preview-avatar">
+                <div class="avatar">
+                    {% if tenant_avatar_image %}
+                    <img src="{{ tenant_avatar_image }}" alt="头像预览" id="avatarPreview">
+                    {% else %}
+                    <span class="muted" id="avatarPreview">头像</span>
+                    {% endif %}
+                </div>
+                <div>
+                    <div style="font-weight:800;">头像位预览</div>
+                    <div class="muted">用于登录后和系统头部展示</div>
+                </div>
+            </div>
+
+            <form class="form-grid" method="post" enctype="multipart/form-data" id="branding-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                <div class="field">
+                    <label>顶部图片</label>
+                    <div class="upload-actions">
+                        <label class="btn btn-soft" for="topImageInput">选择顶部图</label>
+                        <span class="muted" id="topImageName">未选择文件</span>
+                    </div>
+                    <input type="file" id="topImageInput" name="top_image" accept="image/*">
+                </div>
+                <div class="field">
+                    <label>头像图片</label>
+                    <div class="upload-actions">
+                        <label class="btn btn-soft" for="avatarImageInput">选择头像</label>
+                        <span class="muted" id="avatarImageName">未选择文件</span>
+                    </div>
+                    <input type="file" id="avatarImageInput" name="avatar_image" accept="image/*">
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" type="submit">保存图片</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="crop-modal" id="cropModal" aria-hidden="true">
+        <div class="crop-dialog">
+            <div class="crop-head">
+                <div>
+                    <div style="font-weight:900; font-size:16px;">裁切图片</div>
+                    <div class="muted" id="cropHint">拖动选区，选中你要保留的区域</div>
+                    <div class="crop-meta" id="cropMeta">历史 0 / 0</div>
+                </div>
+                <button class="btn btn-soft" type="button" id="cropCancelTop">关闭</button>
+            </div>
+            <div class="crop-toolbar">
+                <button class="crop-chip active" type="button" data-aspect="free">自由</button>
+                <button class="crop-chip" type="button" data-aspect="1">1:1</button>
+                <button class="crop-chip" type="button" data-aspect="1.7777777778">16:9</button>
+                <button class="crop-chip" type="button" data-aspect="2.4">12:5</button>
+                <button class="crop-chip" type="button" data-action="zoom-in">放大</button>
+                <button class="crop-chip" type="button" data-action="zoom-out">缩小</button>
+                <button class="crop-chip" type="button" data-action="rotate-left">左转</button>
+                <button class="crop-chip" type="button" data-action="rotate-right">右转</button>
+                <button class="crop-chip" type="button" data-action="undo">撤销</button>
+                <button class="crop-chip" type="button" data-action="redo">重做</button>
+                <button class="crop-chip" type="button" data-action="reset">重置</button>
+            </div>
+            <div class="crop-stage">
+                <img id="cropImage" alt="裁切预览">
+            </div>
+            <div class="crop-foot">
+                <button class="btn btn-soft" type="button" id="cropCancelBottom">取消</button>
+                <button class="btn btn-primary" type="button" id="cropSave">使用选区</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+    <script>
+        const cropModal = document.getElementById('cropModal');
+        const cropImage = document.getElementById('cropImage');
+        const cropHint = document.getElementById('cropHint');
+        const cropMeta = document.getElementById('cropMeta');
+        const cropSave = document.getElementById('cropSave');
+        const cropCancelTop = document.getElementById('cropCancelTop');
+        const cropCancelBottom = document.getElementById('cropCancelBottom');
+        const topInput = document.getElementById('topImageInput');
+        const avatarInput = document.getElementById('avatarImageInput');
+        const topName = document.getElementById('topImageName');
+        const avatarName = document.getElementById('avatarImageName');
+        const form = document.getElementById('branding-form');
+        let cropper = null;
+        let activeInput = null;
+        let activeFileName = '';
+        let activeAspectRatio = NaN;
+        let cropHistory = [];
+        let cropHistoryIndex = -1;
+        let currentPreset = 'free';
+        let cropEndHandler = null;
+        let cropZoomEndHandler = null;
+
+        function deepClone(value) {
+            return JSON.parse(JSON.stringify(value));
+        }
+
+        function updateCropMeta() {
+            cropMeta.textContent = '历史 ' + (cropHistoryIndex + 1) + ' / ' + cropHistory.length;
+        }
+
+        function captureCropState() {
+            if (!cropper) {
+                return;
+            }
+            const state = {
+                data: cropper.getData(true),
+                canvasData: cropper.getCanvasData(),
+                cropBoxData: cropper.getCropBoxData(),
+                aspectRatio: activeAspectRatio,
+                preset: currentPreset,
+            };
+            const serialized = JSON.stringify(state);
+            const current = cropHistory[cropHistoryIndex];
+            if (current && JSON.stringify(current) === serialized) {
+                updateCropMeta();
+                return;
+            }
+            cropHistory = cropHistory.slice(0, cropHistoryIndex + 1);
+            cropHistory.push(deepClone(state));
+            cropHistoryIndex = cropHistory.length - 1;
+            updateCropMeta();
+        }
+
+        function applyCropState(index) {
+            if (!cropper || index < 0 || index >= cropHistory.length) {
+                return;
+            }
+            cropHistoryIndex = index;
+            const state = cropHistory[index];
+            activeAspectRatio = state.aspectRatio;
+            currentPreset = state.preset || 'free';
+            cropper.setAspectRatio(activeAspectRatio);
+            cropper.reset();
+            cropper.setCanvasData(state.canvasData);
+            cropper.setCropBoxData(state.cropBoxData);
+            cropper.setData(state.data);
+            syncPresetButtons();
+            updateCropMeta();
+        }
+
+        function syncPresetButtons() {
+            document.querySelectorAll('.crop-chip[data-aspect]').forEach((button) => {
+                button.classList.toggle('active', button.dataset.aspect === currentPreset);
+            });
+        }
+
+        function pushInitialCropState() {
+            cropHistory = [];
+            cropHistoryIndex = -1;
+            captureCropState();
+        }
+
+        function setPreset(preset, aspectRatio) {
+            if (!cropper) {
+                return;
+            }
+            currentPreset = preset;
+            activeAspectRatio = aspectRatio;
+            cropper.setAspectRatio(aspectRatio);
+            captureCropState();
+            syncPresetButtons();
+        }
+
+        function cropZoom(delta) {
+            if (!cropper) {
+                return;
+            }
+            cropper.zoom(delta);
+            captureCropState();
+        }
+
+        function cropRotate(step) {
+            if (!cropper) {
+                return;
+            }
+            cropper.rotate(step);
+            captureCropState();
+        }
+
+        function cropReset() {
+            if (!cropper) {
+                return;
+            }
+            cropper.reset();
+            cropper.setAspectRatio(activeAspectRatio);
+            captureCropState();
+        }
+
+        function openCropper(file, input, aspectRatio, hintText, fileNameNode) {
+            activeInput = input;
+            activeAspectRatio = aspectRatio;
+            currentPreset = aspectRatio === 1 ? '1' : 'free';
+            activeFileName = file.name;
+            fileNameNode.textContent = file.name;
+            cropHint.textContent = hintText;
+            const reader = new FileReader();
+            reader.onload = () => {
+                cropImage.src = reader.result;
+                cropModal.classList.add('open');
+                if (cropper) {
+                    cropper.destroy();
+                }
+                cropper = new Cropper(cropImage, {
+                    viewMode: 1,
+                    autoCropArea: 1,
+                    responsive: true,
+                    background: false,
+                    dragMode: 'move',
+                    guides: true,
+                    center: true,
+                    highlight: true,
+                    movable: true,
+                    rotatable: true,
+                    scalable: true,
+                    zoomable: true,
+                    zoomOnWheel: true,
+                    zoomOnTouch: true,
+                    cropBoxMovable: true,
+                    cropBoxResizable: true,
+                    toggleDragModeOnDblclick: false,
+                    aspectRatio: activeAspectRatio,
+                    ready() {
+                        syncPresetButtons();
+                        pushInitialCropState();
+                    },
+                });
+                cropEndHandler = () => captureCropState();
+                cropZoomEndHandler = () => captureCropState();
+                cropImage.addEventListener('cropend', cropEndHandler);
+                cropImage.addEventListener('zoomend', cropZoomEndHandler);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function closeCropper() {
+            cropModal.classList.remove('open');
+            if (cropper) {
+                if (cropEndHandler) {
+                    cropImage.removeEventListener('cropend', cropEndHandler);
+                    cropEndHandler = null;
+                }
+                if (cropZoomEndHandler) {
+                    cropImage.removeEventListener('zoomend', cropZoomEndHandler);
+                    cropZoomEndHandler = null;
+                }
+                cropper.destroy();
+                cropper = null;
+            }
+            if (activeInput) {
+                activeInput.value = '';
+            }
+            activeInput = null;
+            cropHistory = [];
+            cropHistoryIndex = -1;
+        }
+
+        function replaceFileInput(fileName, blob) {
+            const file = new File([blob], fileName, { type: blob.type || 'image/png' });
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            activeInput.files = dataTransfer.files;
+        }
+
+        topInput.addEventListener('change', () => {
+            const file = topInput.files && topInput.files[0];
+            if (!file) {
+                topName.textContent = '未选择文件';
+                return;
+            }
+            openCropper(file, topInput, NaN, '顶部图片可自由拖动与缩放，选好后再保存', topName);
+        });
+
+        avatarInput.addEventListener('change', () => {
+            const file = avatarInput.files && avatarInput.files[0];
+            if (!file) {
+                avatarName.textContent = '未选择文件';
+                return;
+            }
+            openCropper(file, avatarInput, 1, '头像建议裁成方形，可像微信一样拖动选区', avatarName);
+        });
+
+        cropCancelTop.addEventListener('click', closeCropper);
+        cropCancelBottom.addEventListener('click', closeCropper);
+
+        document.querySelectorAll('.crop-chip').forEach((button) => {
+            button.addEventListener('click', () => {
+                const aspect = button.dataset.aspect;
+                const action = button.dataset.action;
+                if (aspect) {
+                    if (aspect === 'free') {
+                        setPreset('free', NaN);
+                    } else if (aspect === '1') {
+                        setPreset('1', 1);
+                    } else if (aspect === '1.7777777778') {
+                        setPreset('1.7777777778', 16 / 9);
+                    } else if (aspect === '2.4') {
+                        setPreset('2.4', 12 / 5);
+                    }
+                    syncPresetButtons();
+                    return;
+                }
+                if (action === 'zoom-in') {
+                    cropZoom(0.1);
+                } else if (action === 'zoom-out') {
+                    cropZoom(-0.1);
+                } else if (action === 'rotate-left') {
+                    cropRotate(-90);
+                } else if (action === 'rotate-right') {
+                    cropRotate(90);
+                } else if (action === 'undo') {
+                    applyCropState(cropHistoryIndex - 1);
+                } else if (action === 'redo') {
+                    applyCropState(cropHistoryIndex + 1);
+                } else if (action === 'reset') {
+                    cropReset();
+                }
+            });
+        });
+
+        cropModal.addEventListener('click', (event) => {
+            if (event.target === cropModal) {
+                closeCropper();
+            }
+        });
+
+        cropSave.addEventListener('click', () => {
+            if (!cropper || !activeInput) {
+                return;
+            }
+            var purpose = activeInput.id === 'topImageInput' ? 'top' : 'avatar';
+            cropper.getCroppedCanvas({
+                fillColor: '#ffffff',
+                imageSmoothingEnabled: true,
+                imageSmoothingQuality: 'high',
+            }).toBlob(function(blob) {
+                if (!blob) return;
+                var fd = new FormData();
+                fd.append('file', blob, 'crop.png');
+                fd.append('purpose', purpose);
+                fetch('/upload_brand_image', {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': '{{ csrf_token_value }}'},
+                    body: fd
+                }).then(function(r) { return r.json(); }).then(function(data) {
+                    if (data.status === 'ok') {
+                        var el = document.getElementById(purpose === 'top' ? 'topPreview' : 'avatarPreview');
+                        if (el) {
+                            if (el.tagName === 'IMG') { el.src = data.path + '?t=' + Date.now(); }
+                            else { el.outerHTML = '<img src=\"' + data.path + '?t=' + Date.now() + '\" id=\"' + el.id + '\" alt=\"预览\">'; }
+                        }
+                        closeCropper();
+                    }
+                });
+            }, 'image/png', 0.95);
+        });
+    </script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    {% include '_mobile_nav.html' %}
+</body>
+</html>

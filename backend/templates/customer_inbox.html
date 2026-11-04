@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>查看回复</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}?v=2">
+    <style>
+        :root { --ink-1:#111111; --ink-2:#2d2d2d; --ink-3:#717171; --line: rgba(17,17,17,0.08); }
+        body {
+            background:
+                radial-gradient(circle at 10% 10%, rgba(0,0,0,0.05), transparent 24%),
+                radial-gradient(circle at 90% 0%, rgba(0,0,0,0.04), transparent 18%),
+                linear-gradient(180deg, #ffffff 0%, #f4f4f1 100%);
+            color: var(--ink-1);
+            font-family: "Segoe UI Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        }
+        .page { max-width: 1120px; margin: 0 auto; padding: 28px 20px 40px; }
+        .hero { margin-bottom: 14px; padding: 18px 20px; border-radius: 24px; border: 1px solid var(--line); background: rgba(255,255,255,0.78); box-shadow: 0 14px 30px rgba(17,17,17,0.05); }
+        .panel { background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,247,244,0.96)); border: 1px solid var(--line); border-radius: 24px; box-shadow: 0 16px 34px rgba(17,17,17,0.06); padding: 24px; }
+        h2 { margin: 0 0 10px; font-size: 30px; letter-spacing: -0.05em; font-weight: 900; }
+        .meta { color: var(--ink-3); font-size: 13px; }
+        .reply-list { display:grid; gap:12px; }
+        .question-group { border:1px solid var(--line); border-radius:18px; padding:14px; background:#fdfdfc; }
+        .group-head { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+        .reply-item { border:1px solid var(--line); border-radius:18px; padding:14px; background:#fff; }
+        .reply-head { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+        .reply-meta { color: var(--ink-3); font-size: 12px; }
+        .reply-answer { color: var(--ink-2); line-height: 1.7; }
+            @media (max-width: 960px) {
+                .page { padding: 18px 14px 24px; }
+                .hero, .panel { border-radius: 20px; }
+                .hero { padding: 14px 16px; }
+                .brand { flex-direction: column; align-items: flex-start; }
+                .actions, .reply-actions { flex-direction: column; }
+                .btn, .reply-actions a, .reply-actions button { width: 100%; }
+                .inbox-list { gap: 10px; }
+                .question-card, .reply-card { padding: 12px; }
+            }
+            @media (max-width: 640px) {
+                .brand h2 { font-size: 22px; }
+                .question-title { font-size: 16px; }
+                .reply-meta, .meta { font-size: 12px; }
+            }
+        .reply-answer img { max-width: 100%; border-radius: 12px; border:1px solid var(--line); margin-top:8px; }
+        .question-text { margin-top: 6px; color: var(--ink-2); line-height: 1.7; }
+        .actions { margin-top: 12px; }
+        .btn { border:0; border-radius:999px; min-height:40px; padding:0 16px; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+        .btn-soft { background:#fff; color:var(--ink-1); border:1px solid var(--line); }
+        .sort-row { margin-bottom: 12px; display:flex; justify-content:flex-end; }
+        .sort-row select { border:1px solid var(--line); border-radius:12px; padding:8px 10px; background:#fff; }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="hero">
+            <div class="brand">
+                {{ tenant_brand_html|safe }}
+                <div>
+                    <h2>查看回复</h2>
+                    <div class="meta">{{ tenant_name }} · 收件箱</div>
+                </div>
+            </div>
+            <div class="actions"><a class="btn btn-soft" href="{{ url_for('chat_page') }}">返回聊天</a></div>
+        </div>
+
+        <div class="panel">
+            <form class="sort-row" method="get" action="{{ url_for('customer_inbox') }}">
+                <select name="sort" onchange="this.form.submit()">
+                    <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>按最新时间</option>
+                    <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>按最早时间</option>
+                </select>
+            </form>
+            {% if not groups %}
+                <div class="meta">暂时还没有收到回复。</div>
+            {% else %}
+                <div class="reply-list">
+                    {% for group in groups %}
+                    <section class="question-group">
+                        <div class="group-head">
+                            <div>
+                                <strong>你当时问：</strong>
+                                <span class="reply-meta">{{ group.question_created_at | beijing_time }}</span>
+                            </div>
+                            <div class="reply-meta">{% if group.replies %}{{ group.replies|length }} 条回复{% else %}暂未回复{% endif %}</div>
+                        </div>
+                        <div class="question-text">{{ group.question_text or '已删除的问题' }}</div>
+                        {% for item in group.replies %}
+                        <article class="reply-item">
+                            <div class="reply-head">
+                                <div><strong>回复</strong><span class="reply-meta"> · 回复人：{{ item.responder_name }} · {{ item.created_at | beijing_time }}</span></div>
+                            </div>
+                            <div class="reply-answer">{{ item.answer_html|safe if item.answer_html else item.answer_text }}</div>
+                            <div style="margin-top:8px;">
+                                <form method="post" action="{{ url_for('delete_reply', reply_id=item.id) }}" style="display:inline;" data-confirm="确认删除这条回复吗？">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                                    <button class="btn btn-sm btn-soft" type="submit">删除</button>
+                                </form>
+                            </div>
+                        </article>
+                        {% endfor %}
+                    </section>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    {% include '_mobile_nav.html' %}
+</body>
+</html>

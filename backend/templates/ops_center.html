@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>操作中心</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}?v=10">
+    <style>
+        .ops-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px; }
+        .ops-card { background: #fff; border: 1px solid var(--panel-border); border-radius: 16px; padding: 20px 16px; text-align: center; text-decoration: none; color: var(--text); box-shadow: var(--shadow-sm); }
+        .ops-card .icon { font-size: 28px; margin-bottom: 6px; }
+        .ops-card .name { font-size: 13px; font-weight: 600; }
+        .ops-card .count { font-size: 11px; color: var(--muted); margin-top: 2px; }
+        .ops-card:active { transform: scale(0.96); }
+        .page-title { padding: 16px 16px 0; font-size: 20px; font-weight: 700; letter-spacing: -0.03em; }
+    </style>
+</head>
+<body>
+    <div class="page" style="padding-bottom: 70px;">
+        <div class="page-title">操作中心</div>
+        {% with messages = get_flashed_messages() %}
+        <script id="flash-data" type="application/json">{{ messages | tojson | safe }}</script>
+        {% endwith %}
+        <div class="ops-grid">
+            <a class="ops-card" href="{{ url_for('add_page') }}">
+                <div class="icon">+</div>
+                <div class="name">录入问答</div>
+            </a>
+            <a class="ops-card" href="{{ url_for('question_review') }}">
+                <div class="icon">💬</div>
+                <div class="name">客户提问</div>
+            </a>
+            {% if session.get('role') == 'admin' %}
+            <a class="ops-card" href="{{ url_for('review_users') }}">
+                <div class="icon">👤</div>
+                <div class="name">用户审核</div>
+            </a>
+            <a class="ops-card" href="{{ url_for('member_accounts') }}">
+                <div class="icon">⚙️</div>
+                <div class="name">账号管理</div>
+            </a>
+            <a class="ops-card" href="{{ url_for('operation_logs_page') }}">
+                <div class="icon">📋</div>
+                <div class="name">操作日志</div>
+            </a>
+            {% endif %}
+            {% if can_edit %}
+            <a class="ops-card" href="{{ url_for('manage_qa') }}" style="grid-column: 1 / -1;">
+                <div class="icon">📚</div>
+                <div class="name">知识库管理</div>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% include '_mobile_nav.html' %}
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

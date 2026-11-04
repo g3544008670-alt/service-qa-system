@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>回复客户问题</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}?v=2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='rich_editor.css') }}">
+    <style>
+        :root { --ink-1:#111111; --ink-2:#2d2d2d; --ink-3:#707070; --line: rgba(17,17,17,0.08); }
+        body {
+            background:
+                radial-gradient(circle at 10% 10%, rgba(0,0,0,0.05), transparent 24%),
+                radial-gradient(circle at 90% 0%, rgba(0,0,0,0.04), transparent 18%),
+                linear-gradient(180deg, #ffffff 0%, #f4f4f1 100%);
+            color: var(--ink-1);
+            font-family: "Segoe UI Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        }
+        .page { max-width: 1100px; margin: 0 auto; padding: 28px 20px 40px; }
+        .hero { margin-bottom: 14px; padding: 18px 20px; border-radius: 24px; border: 1px solid var(--line); background: rgba(255,255,255,0.78); box-shadow: 0 14px 30px rgba(17,17,17,0.05); }
+        .panel { background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,247,244,0.96)); border: 1px solid var(--line); border-radius: 24px; box-shadow: 0 16px 34px rgba(17,17,17,0.06); padding: 24px; }
+        h2 { margin: 0 0 10px; font-size: 30px; letter-spacing: -0.05em; font-weight: 900; }
+        .meta { color: var(--ink-3); font-size: 13px; }
+        .question-box { margin: 12px 0 14px; padding: 12px 14px; border-radius: 14px; border:1px solid var(--line); background:#fff; }
+        label { display: block; margin: 16px 0 8px; font-weight: 700; color: var(--ink-2); }
+        input[type="text"] { width:100%; padding: 12px 14px; border-radius: 14px; border:1px solid rgba(17,17,17,0.10); background:#fff; }
+        .mode-row { display:flex; gap:14px; flex-wrap: wrap; }
+        .mode-item { padding: 10px 12px; border-radius: 999px; background:#fff; border:1px solid var(--line); }
+        .rich-editor-shell { margin-top: 6px; border-radius: 22px; overflow: hidden; border: 1px solid rgba(17,17,17,0.08); box-shadow: 0 12px 28px rgba(17,17,17,0.04); }
+        .rich-toolbar { background: linear-gradient(180deg, #ffffff, #f7f7f4); border-bottom: 1px solid rgba(17,17,17,0.06); }
+        .rich-editor { background: #fff; min-height: 220px; }
+        .actions { display:flex; gap:12px; flex-wrap:wrap; margin-top: 16px; }
+        .btn { border:0; border-radius:999px; min-height:42px; padding:0 16px; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+        .btn-primary { background: linear-gradient(135deg, #111111, #363636); color:#fff; box-shadow: 0 10px 24px rgba(17,17,17,0.12); }
+        .btn-soft { background:#fff; color:var(--ink-1); border:1px solid var(--line); }
+        @media (max-width: 960px) {
+            .page { padding: 18px 14px 24px; }
+            .hero, .panel { border-radius: 20px; }
+            .hero { padding: 14px 16px; }
+            .brand { flex-direction: column; align-items: flex-start; }
+            .panel { padding: 16px; }
+            .mode-row { flex-direction: column; }
+            .mode-item { width: 100%; }
+            .actions { flex-direction: column; }
+            .btn, input[type="text"], .rich-editor-shell { width: 100%; }
+        }
+        @media (max-width: 640px) {
+            h2 { font-size: 24px; }
+            .question-box { padding: 10px 12px; }
+            .rich-editor { min-height: 180px; }
+            .rich-toolbar { display:flex; flex-wrap:wrap; gap:8px; padding:10px; }
+            .tool-hint { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="hero">
+            <div class="brand">
+                {{ tenant_brand_html|safe }}
+                <div>
+                    <h2>回复客户问题</h2>
+                    <div class="meta">{{ tenant_name }} · 回复客户</div>
+                </div>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="question-box">
+                <strong>客户问题：</strong> {{ qa.question }}
+            </div>
+            <form id="replyForm" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                <label>回答者署名（必填）</label>
+                <input type="text" name="responder_name" value="{{ username }}" required>
+
+                <label>回复方式</label>
+                <div class="mode-row">
+                    <label class="mode-item"><input type="radio" name="reply_mode" value="private" checked> 私下回复（不录入知识库）</label>
+                    {% if can_edit_qa %}
+                    <label class="mode-item"><input type="radio" name="reply_mode" value="public"> 公开回复（录入知识库）</label>
+                    {% else %}
+                    <label class="mode-item" style="opacity:.62;"><input type="radio" name="reply_mode" value="public" disabled> 公开回复（仅允许有知识库编辑权限的员工/管理员）</label>
+                    {% endif %}
+                </div>
+
+                <label>回复内容</label>
+                <div class="rich-editor-shell">
+                    <div class="rich-toolbar">
+                        <button class="tool-btn" type="button" id="insertImageBtn">插入图片</button>
+                        <button class="tool-btn" type="button" id="insertFileBtn">插入文件</button>
+                        <span class="tool-hint">支持图片和文件，客户收件箱可直接查看。</span>
+                    </div>
+                    <div id="reply_answer_editor" class="rich-editor" contenteditable="true"></div>
+                </div>
+                <input id="reply_image_picker" type="file" accept="image/*" multiple hidden>
+                <input id="reply_file_picker" type="file" multiple hidden>
+                <input type="hidden" name="answer_html" id="reply_answer_html">
+                <input type="hidden" name="answer_text" id="reply_answer_text">
+
+                <div class="actions">
+                    <button class="btn btn-primary" type="submit">提交回复</button>
+                    <a class="btn btn-soft" href="{{ url_for('question_review') }}">返回客户提问审核</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='rich_editor.js') }}"></script>
+    <script>
+        const richEditor = initRichEditor({
+            editorSelector: '#reply_answer_editor',
+            hiddenHtmlSelector: '#reply_answer_html',
+            hiddenTextSelector: '#reply_answer_text',
+            insertImageBtnSelector: '#insertImageBtn',
+            insertFileBtnSelector: '#insertFileBtn',
+            imageInputSelector: '#reply_image_picker',
+            fileInputSelector: '#reply_file_picker',
+            placeholderText: '输入对客户的回复内容',
+        });
+        document.getElementById('replyForm').addEventListener('submit', function () {
+            richEditor.update();
+        });
+    </script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    {% include '_mobile_nav.html' %}
+</body>
+</html>

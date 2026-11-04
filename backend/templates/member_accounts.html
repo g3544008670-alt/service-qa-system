@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>成员账号管理</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}?v=2">
+    <style>
+        :root { --ink-1:#111111; --ink-2:#2d2d2d; --ink-3:#717171; --line: rgba(17,17,17,0.08); }
+        body { background: linear-gradient(180deg, #ffffff 0%, #f4f4f1 100%); color: var(--ink-1); font-family: "Segoe UI Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
+        .page { max-width: 1080px; margin: 0 auto; padding: 28px 20px 40px; }
+        .hero { margin-bottom: 14px; padding: 18px 20px; border-radius: 24px; border: 1px solid var(--line); background: rgba(255,255,255,0.78); box-shadow: 0 14px 30px rgba(17,17,17,0.05); display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+        .panel { background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,247,244,0.96)); border: 1px solid var(--line); border-radius: 24px; box-shadow: 0 16px 34px rgba(17,17,17,0.06); padding: 20px; }
+        table { width:100%; border-collapse: collapse; }
+        th, td { border-bottom:1px solid var(--line); padding:12px 10px; text-align:left; }
+        th { font-size:13px; color:var(--ink-3); text-transform: uppercase; letter-spacing: .04em; }
+        .btn { border:0; border-radius:999px; min-height:34px; padding:0 12px; font-weight:800; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+        .btn-soft { background:#fff; color:var(--ink-1); border:1px solid var(--line); }
+        .btn-danger { background:#111; color:#fff; }
+        .meta { color: var(--ink-3); font-size: 13px; }
+        .action-group { display:flex; gap:8px; flex-wrap:wrap; }
+        @media (max-width: 960px) {
+            .page { padding: 18px 14px 24px; }
+            .hero, .panel { border-radius: 20px; }
+            .hero { padding: 14px 16px; }
+            .brand { flex-direction: column; align-items: flex-start; }
+            table, thead, tbody, th, td, tr { display: block; width: 100%; }
+            thead { display: none; }
+            tbody tr { border:1px solid var(--line); border-radius:16px; padding:12px; margin-bottom:10px; background:#fff; }
+            tbody td { border:0; padding:6px 0; }
+            tbody td:last-child { padding-bottom:0; }
+            tbody td::before { content: attr(data-label); display:block; font-size:12px; color:var(--ink-3); text-transform: uppercase; letter-spacing:.04em; margin-bottom:2px; }
+            .action-group {
+                flex-direction: column;
+                display: grid;
+                grid-template-columns: 1fr;
+                width: 100%;
+            }
+            .action-group .btn, .action-group form { width: 100%; }
+            .action-group .btn { width: 100%; }
+        }
+        @media (max-width: 640px) {
+            .brand h2 { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="hero">
+            <div class="brand">
+                {{ tenant_brand_html|safe }}
+                <div>
+                    <h2 style="margin:0;">成员账号管理</h2>
+                    <div class="meta">{{ tenant_name }} · 账号管理</div>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <a class="btn btn-soft" href="{{ url_for('manage_qa') }}">返回知识库管理</a>
+                <a class="btn btn-soft" href="{{ url_for('review_users') }}">用户审核</a>
+            </div>
+        </div>
+
+        <div class="panel">
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div class="meta" style="margin-bottom:10px;">{{ messages[0] }}</div>
+            {% endif %}
+            {% endwith %}
+
+            {% if not accounts %}
+            <div class="meta">暂无员工或客户账号。</div>
+            {% else %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>用户名</th>
+                        <th>角色</th>
+                        <th>状态</th>
+                        <th>可见范围</th>
+                        <th>知识库权限</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in accounts %}
+                    <tr>
+                        <td data-label="用户名">{{ item.username }}</td>
+                        <td data-label="角色">{{ item.role }}</td>
+                        <td data-label="状态">{{ item.status }}</td>
+                        <td data-label="可见范围">{% if item.public_only %}仅公开{% else %}全部{% endif %}</td>
+                        <td data-label="知识库权限">{% if item.role == 'employee' %}{% if item.can_edit_qa %}已授权{% else %}未授权{% endif %}{% else %}-{% endif %}</td>
+                        <td data-label="操作">
+                            <div class="action-group" style="display:flex; gap:8px; flex-wrap:wrap;">
+                                {% if item.role == 'employee' %}
+                                <form method="post" action="{{ url_for('toggle_member_qa_permission', username=item.username) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                                    <button class="btn btn-soft" type="submit">{% if item.can_edit_qa %}撤销权限{% else %}授权编辑{% endif %}</button>
+                                </form>
+                                {% endif %}
+                                <form method="post" action="{{ url_for('delete_member_account', username=item.username) }}" data-confirm="确认删除账号 {{ item.username }} 吗？">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                                    <button class="btn btn-danger" type="submit">删除</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    {% include '_mobile_nav.html' %}
+</body>
+</html>

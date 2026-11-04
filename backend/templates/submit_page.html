@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>提交问题 - 等待审核</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}?v=2">
+    <style>
+        :root { --ink-1:#111111; --ink-2:#2d2d2d; --ink-3:#717171; --line: rgba(17,17,17,0.08); }
+        body {
+            background:
+                radial-gradient(circle at 10% 10%, rgba(0,0,0,0.05), transparent 24%),
+                radial-gradient(circle at 90% 0%, rgba(0,0,0,0.04), transparent 18%),
+                linear-gradient(180deg, #ffffff 0%, #f4f4f1 100%);
+            color: var(--ink-1);
+            font-family: "Segoe UI Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        }
+        .hero {
+            padding: 18px 20px;
+            border: 1px solid var(--line);
+            border-radius: 26px;
+            background: rgba(255,255,255,0.78);
+            box-shadow: 0 14px 30px rgba(17,17,17,0.05);
+            margin-bottom: 14px;
+        }
+        .panel { background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,247,244,0.96)); border: 1px solid var(--line); border-radius: 24px; box-shadow: 0 16px 34px rgba(17,17,17,0.06); padding: 24px; }
+        label { display:block; margin:14px 0 8px; font-weight:700; color:var(--ink-2); }
+        textarea { width: 100%; border-radius: 14px; border: 1px solid rgba(17,17,17,0.10); background:#fff; padding: 12px 14px; }
+        .btn { border-radius: 999px; min-height: 40px; padding: 0 16px; font-weight: 800; }
+        .btn-primary { background: linear-gradient(135deg, #111111, #363636); }
+        .btn-soft { background:#fff; border:1px solid var(--line); color: var(--ink-1); }
+        .muted { color: var(--ink-3); }
+        @media (max-width: 960px) {
+            .page { padding: 18px 14px 24px; }
+            .hero, .panel { border-radius: 20px; }
+            .hero { padding: 14px 16px; }
+            .brand { flex-direction: column; align-items: flex-start; }
+            .btn, textarea, input[type="file"] { width: 100%; }
+            .panel { padding: 16px; }
+        }
+        @media (max-width: 640px) {
+            .hero .meta { font-size: 12px; }
+            .brand h2 { font-size: 22px; }
+            .btn { min-height: 44px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="hero">
+            <div class="brand">{{ tenant_brand_html|safe }}<div><h2>提交问题（客户）</h2><div class="meta">{{ tenant_name }} · 客户提问</div></div></div>
+            <div><a class="btn btn-soft" href="{{ url_for('chat_page') }}">返回聊天</a></div>
+        </div>
+        <div class="panel">
+            <form onsubmit="return submitQA(event)">
+                <label>问题</label>
+                <textarea id="q" rows="3" required></textarea>
+                <div style="margin-top:12px;">
+                    <button class="btn btn-primary" type="submit">提交审核</button>
+                    <a class="btn btn-soft" href="{{ url_for('customer_inbox') }}">查看回复</a>
+                </div>
+            </form>
+            <p id="msg" class="muted"></p>
+        </div>
+    </div>
+    <script>
+        function submitQA(e){
+            e.preventDefault();
+            var q = document.getElementById('q').value.trim();
+            fetch("{{ url_for('submit_qa') }}", {method:'POST', headers:{'Content-Type':'application/json', 'X-CSRFToken': '{{ csrf_token_value }}'}, body:JSON.stringify({qa:{question:q}})})
+            .then(r=>r.json()).then(d=>{document.getElementById('msg').textContent = d.message; if(d.status==='ok') setTimeout(()=>location.href="{{ url_for('chat_page') }}",1200)});
+            return false;
+        }
+    </script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    {% include '_mobile_nav.html' %}
+</body>
+</html>

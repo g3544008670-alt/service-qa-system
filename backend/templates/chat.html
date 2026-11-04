@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>服务智能问答系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}?v=2">
+    <style>
+        :root {
+            --mono-0: #ffffff;
+            --mono-1: #f7f7f5;
+            --mono-2: #ecebe6;
+            --mono-3: #d8d6cf;
+            --ink-1: #111111;
+            --ink-2: #2f2f2f;
+            --ink-3: #6b6b6b;
+            --line-soft: rgba(17,17,17,0.08);
+            --line-strong: rgba(17,17,17,0.16);
+        }
+        body {
+            background:
+                radial-gradient(circle at top left, rgba(0,0,0,0.05), transparent 30%),
+                radial-gradient(circle at 100% 0%, rgba(0,0,0,0.04), transparent 24%),
+                linear-gradient(180deg, #ffffff 0%, #f4f4f1 100%);
+            color: var(--ink-1);
+            font-family: "Segoe UI Variable", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        }
+        .page { max-width: 1540px; }
+        .hero {
+            padding: 16px 18px;
+            border: 1px solid var(--line-soft);
+            border-radius: 28px;
+            background: rgba(255,255,255,0.72);
+            box-shadow: 0 12px 30px rgba(17,17,17,0.05);
+            backdrop-filter: blur(16px);
+        }
+        .hero h2 { font-size: 27px; letter-spacing: -0.04em; font-weight: 800; }
+        .hero .meta { color: var(--ink-3); }
+        .tenant-top-slot {
+            margin-bottom: 16px;
+            min-height: 260px;
+            border: 1px dashed rgba(17,17,17,0.14);
+            border-radius: 28px;
+            background: rgba(255,255,255,0.56);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tenant-top-slot img { width: 100%; height: 260px; object-fit: contain; display: block; background: #fff; }
+        .tenant-top-placeholder { color: var(--ink-3); font-size: 13px; letter-spacing: .02em; }
+        .nav-actions .btn,
+        .advanced-toggle,
+        .composer button,
+        .thread-item .meta,
+        .thread-delete,
+        .msg-delete {
+            font-size: 13px;
+        }
+        .btn,
+        .advanced-toggle {
+            border-radius: 999px;
+            min-height: 40px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #111111, #2c2c2c);
+            box-shadow: 0 10px 24px rgba(17,17,17,0.12);
+        }
+        .btn-ghost {
+            background: rgba(255,255,255,0.88);
+            border-color: var(--line-soft);
+            color: var(--ink-1);
+        }
+        .shell {
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,248,245,0.96));
+            border: 1px solid var(--line-soft);
+            box-shadow: 0 16px 34px rgba(17,17,17,0.06);
+            border-radius: 28px;
+            padding: 28px;
+            min-width: 0;
+        }
+        .chat-grid { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 22px; }
+        .thread-panel {
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(243,243,239,0.92));
+            border: 1px solid var(--line-soft);
+            box-shadow: 0 14px 30px rgba(17,17,17,0.06);
+            border-radius: 24px;
+            padding: 18px;
+            min-height: 640px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .thread-panel .panel-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .thread-list { display: grid; gap: 10px; overflow: auto; padding-right: 4px; }
+        .thread-item {
+            width: 100%;
+            text-align: left;
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(249,249,246,0.96));
+            border: 1px solid var(--line-soft);
+            border-radius: 18px;
+            padding: 12px 14px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: flex-start;
+            transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+        }
+        .thread-item:hover { transform: translateY(-1px); border-color: var(--line-strong); box-shadow: 0 8px 20px rgba(17,17,17,0.05); }
+        .thread-item.active { border-color: #111; box-shadow: 0 0 0 4px rgba(17,17,17,0.06); }
+        .thread-item .title { font-weight: 700; color: var(--ink-1); letter-spacing: -0.01em; }
+        .thread-item .meta { color: var(--ink-3); font-size: 12px; margin-top: 4px; }
+        .thread-actions { display: flex; flex-direction: column; gap: 6px; }
+        .thread-delete { border: 0; background: transparent; color: #8d8d8d; font-size: 12px; cursor: pointer; padding: 0; }
+        #chat {
+            height: 560px;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 4px 2px 18px;
+            margin-bottom: 16px;
+        }
+        .msg {
+            max-width: 82%;
+            padding: 13px 14px;
+            border-radius: 18px;
+            line-height: 1.72;
+            word-break: break-word;
+            box-shadow: 0 10px 20px rgba(17,17,17,0.06);
+            white-space: pre-wrap;
+            position: relative;
+            backdrop-filter: blur(8px);
+        }
+        .msg.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #111111, #2a2a2a);
+            color: #fff;
+            border-bottom-right-radius: 8px;
+        }
+        .msg.bot {
+            align-self: flex-start;
+            background: rgba(255,255,255,0.96);
+            border: 1px solid var(--line-soft);
+            color: var(--ink-1);
+            border-bottom-left-radius: 8px;
+        }
+        .msg.bot.error { border-color: rgba(120, 120, 120, 0.22); color: #555; background: #fbfbfb; }
+        .msg-content { display: block; margin-top: 4px; white-space: normal; }
+        .msg-content img { display: block; max-width: 100%; height: auto; margin: 10px 0; border-radius: 14px; border: 1px solid rgba(17,17,17,0.08); }
+        .msg-content a { color: inherit; }
+        .msg-actions { margin-top: 8px; display: flex; gap: 10px; }
+        .msg-delete { border: 0; background: transparent; color: inherit; font-size: 12px; cursor: pointer; padding: 0; text-decoration: underline; opacity: .9; }
+        .msg.user .msg-delete { color: rgba(255,255,255,0.94); }
+        .composer {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-top: 8px;
+            padding-top: 2px;
+        }
+        .composer input {
+            flex: 1;
+            border: 1px solid rgba(17,17,17,0.10);
+            border-radius: 16px;
+            padding: 14px 16px;
+            font-size: 15px;
+            background: #fff;
+            outline: none;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+        }
+        .composer input::placeholder { color: #a1a1a1; }
+        .composer input:focus { border-color: #111; box-shadow: 0 0 0 4px rgba(17,17,17,0.08); }
+        .composer button { border: 0; border-radius: 16px; padding: 14px 22px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #111111, #383838); cursor: pointer; box-shadow: 0 10px 20px rgba(17,17,17,0.12); }
+        .hint { margin-top: 10px; color: var(--ink-3); font-size: 13px; }
+        .impersonation-banner { margin: 12px 0 14px; padding: 12px 14px; border-radius: 16px; background: linear-gradient(90deg, #f6f6f4, #ffffff); border: 1px solid rgba(17,17,17,0.08); color: var(--ink-2); box-shadow: 0 8px 22px rgba(17,17,17,0.04); }
+        .advanced-panel { margin-bottom: 14px; padding: 16px; border-radius: 20px; background: linear-gradient(180deg, #111111, #181818); color: #f5f5f5; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 18px 40px rgba(0,0,0,0.32); }
+        .advanced-panel .btn { background: rgba(255,255,255,0.08); color: #f5f5f5; border-color: rgba(255,255,255,0.08); }
+        .advanced-panel .btn:hover { background: rgba(255,255,255,0.12); }
+        .advanced-panel .muted { color: rgba(245,245,245,0.68); }
+        .advanced-note { font-size:13px; color: rgba(245,245,245,0.86); }
+        .ops-strip {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding: 12px 14px;
+            border-radius: 18px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(245,245,241,0.92));
+            border: 1px solid rgba(17,17,17,0.08);
+        }
+        .ops-copy { display:flex; flex-direction:column; gap:2px; }
+        .ops-title { font-size: 13px; font-weight: 800; color: var(--ink-1); letter-spacing: .04em; text-transform: uppercase; }
+        .ops-sub { font-size: 12px; color: var(--ink-3); }
+        .ops-links { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+        .ops-link {
+            display:inline-flex; align-items:center; justify-content:center; min-height:34px; padding:0 12px; border-radius:999px;
+            background:#fff; border:1px solid rgba(17,17,17,0.08); color:var(--ink-1); text-decoration:none; font-size:12px; font-weight:700;
+        }
+        .ops-link:hover { border-color: rgba(17,17,17,0.18); box-shadow: 0 8px 16px rgba(17,17,17,0.05); }
+        @media (max-width: 960px) {
+            .page { padding: 18px 14px 24px; }
+            .hero { flex-direction: column; align-items: flex-start; }
+            .tenant-top-slot { min-height: 160px; }
+            .tenant-top-slot img { height: 160px; }
+            .chat-grid { grid-template-columns: 1fr; }
+            .thread-panel { min-height: auto; padding: 14px; }
+            .shell { padding: 16px; }
+            #chat { height: 48vh; }
+            .msg { max-width: 92%; }
+            .ops-strip { align-items:flex-start; flex-direction:column; }
+            .ops-links { justify-content:flex-start; width: 100%; }
+            .ops-link, .nav-actions .btn { width: 100%; }
+            .nav-actions { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="tenant-top-slot">
+            {% if tenant_top_image %}
+                <img src="{{ tenant_top_image }}" alt="租户顶部图片">
+            {% else %}
+                <div class="tenant-top-placeholder">顶部图片区位</div>
+            {% endif %}
+        </div>
+        <div class="hero">
+            <div class="brand">
+                {{ tenant_brand_html|safe }}
+                <div>
+                    <h2>服务智能问答系统</h2>
+                    <div class="meta">{{ tenant_name }} · {{ role }}</div>
+                </div>
+            </div>
+            <div class="nav-actions">
+                {% if role == 'admin' or can_edit_qa %}
+                    <a class="btn btn-ghost" href="{{ url_for('manage_qa') }}">知识库管理</a>
+                    <a class="btn btn-primary" href="{{ url_for('add_page') }}">录入问答</a>
+                {% endif %}
+                {% if role == 'customer' %}
+                    <a class="btn btn-primary" href="{{ url_for('submit_page') }}">提交问题</a>
+                    <a class="btn btn-ghost" href="{{ url_for('customer_inbox') }}">查看回复{% if new_inbox_count and new_inbox_count > 0 %} ({{ new_inbox_count }}){% endif %}</a>
+                {% endif %}
+                    {% if role == 'admin' %}
+                    <a class="btn btn-ghost" href="{{ url_for('tenant_branding') }}">LOGO</a>
+                    {% endif %}
+                    <a class="btn btn-ghost" href="{{ url_for('logout') }}" data-confirm="确认退出登录吗？">退出</a>
+            </div>
+        </div>
+        {% if is_impersonating %}
+        <div class="impersonation-banner">
+            当前以租户身份打开：<strong>{{ tenant_name }}</strong>（id: {{ impersonated_tenant_id }}） · <a href="{{ url_for('superadmin_stop_impersonate') }}">停止模拟</a>
+        </div>
+        {% endif %}
+
+        <div class="ops-strip">
+            <div class="ops-links">
+                {% if role in ('admin', 'employee') %}
+                    <a class="ops-link" href="{{ url_for('question_review') }}">客户提问审核{% if pending_customer_count and pending_customer_count > 0 %} ({{ pending_customer_count }}){% endif %}</a>
+                {% endif %}
+                {% if role == 'admin' or can_edit_qa %}
+                    <a class="ops-link" href="{{ url_for('debug_model_page') }}">模型诊断</a>
+                {% endif %}
+                {% if role == 'admin' %}
+                    <a class="ops-link" href="{{ url_for('review_users') }}">用户审核</a>
+                    <a class="ops-link" href="{{ url_for('member_accounts') }}">账号管理</a>
+                    <a class="ops-link" href="{{ url_for('operation_logs_page') }}">操作日志</a>
+                {% endif %}
+                {% if is_impersonating %}
+                    <a class="ops-link" href="{{ url_for('superadmin_stop_impersonate') }}">停止模拟</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="chat-grid">
+            <aside class="thread-panel">
+                <div class="panel-title">
+                    <div>
+                        <div class="section-title" style="margin:0;">会话</div>
+                        <div class="muted" style="font-size:12px;">历史记录保存在本地</div>
+                    </div>
+                    <div style="display:flex;gap:6px;">
+                        <button id="batchToggleBtn" class="btn btn-sm btn-soft" type="button">批量</button>
+                        <button id="newThreadBtn" class="btn btn-primary" type="button">新会话</button>
+                    </div>
+                </div>
+                <div id="threadList" class="thread-list"></div>
+            </aside>
+            <div class="shell">
+                <div id="chat"></div>
+                <form id="askForm" class="composer">
+                    <input type="text" id="question" placeholder="输入问题..." autocomplete="off">
+                    <button type="submit">发送</button>
+                </form>
+                <div class="hint">支持语义相似匹配，自动识别近义问法</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const username = {{ username|tojson }};
+        const initialThreadId = {{ thread_id|tojson }};
+        const threadsKey = 'kb_threads_' + username;
+        const currentThreadKey = 'kb_current_thread_' + username;
+        const messageKeyPrefix = 'kb_thread_msgs_' + username + '_';
+        const chat = document.getElementById('chat');
+        const threadList = document.getElementById('threadList');
+        let currentThreadId = initialThreadId;
+
+        function threadMessagesKey(threadId) { return messageKeyPrefix + threadId; }
+        function loadThreads() { try { return JSON.parse(localStorage.getItem(threadsKey) || '[]'); } catch (e) { return []; } }
+        function saveThreads(items) { localStorage.setItem(threadsKey, JSON.stringify(items)); }
+        function persistCurrentThread(threadId) { localStorage.setItem(currentThreadKey, threadId); }
+
+        function ensureThread(threadId, title) {
+            const items = loadThreads();
+            const existing = items.find(item => item.id === threadId);
+            if (!existing) {
+                items.unshift({id: threadId, title: title || '新会话', createdAt: Date.now(), updatedAt: Date.now()});
+                saveThreads(items);
+            }
+            return items;
+        }
+
+        function updateThreadMeta(threadId, patch) {
+            const items = loadThreads();
+            const existing = items.find(item => item.id === threadId);
+            if (!existing) return;
+            Object.assign(existing, patch, {updatedAt: Date.now()});
+            saveThreads(items);
+        }
+
+        function deleteThread(threadId) {
+            const items = loadThreads().filter(item => item.id !== threadId);
+            saveThreads(items);
+            localStorage.removeItem(threadMessagesKey(threadId));
+            if (currentThreadId === threadId) {
+                const nextThread = items[0] || null;
+                if (nextThread) {
+                    currentThreadId = nextThread.id;
+                    persistCurrentThread(currentThreadId);
+                    clearChatView();
+                    loadHistory();
+                } else {
+                    startNewThread();
+                    return;
+                }
+            }
+            renderThreadList();
+        }
+
+        var batchMode = false;
+        var batchSet = new Set();
+
+        function toggleBatch() {
+            batchMode = !batchMode;
+            if (!batchMode) batchSet.clear();
+            renderThreadList();
+        }
+        function delSelected() {
+            if (!batchSet.size) return;
+            window.showConfirm('确认操作', '删除选中的 ' + batchSet.size + ' 个会话？', function() {
+                batchSet.forEach(function(id) { deleteThread(id); });
+                batchSet.clear(); batchMode = false;
+                renderThreadList();
+            });
+        }
+
+        function renderThreadList() {
+            const items = loadThreads().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+            threadList.innerHTML = '';
+            if (!items.length) {
+                const empty = document.createElement('div');
+                empty.className = 'muted';
+                empty.textContent = '暂无聊天窗口，先创建一个新会话。';
+                threadList.appendChild(empty);
+                return;
+            }
+            // 批量操作栏
+            if (batchMode) {
+                var bar = document.createElement('div');
+                bar.style.cssText = 'display:flex;gap:6px;margin-bottom:8px;';
+                var info = document.createElement('span');
+                info.style.cssText = 'flex:1;font-size:12px;color:var(--ink-3);align-self:center;';
+                info.textContent = '已选 ' + batchSet.size + ' 个';
+                var dbtn = document.createElement('button');
+                dbtn.className = 'btn btn-sm btn-danger'; dbtn.textContent = '删除选中';
+                dbtn.onclick = delSelected;
+                var cbtn = document.createElement('button');
+                cbtn.className = 'btn btn-sm btn-soft'; cbtn.textContent = '取消';
+                cbtn.onclick = toggleBatch;
+                bar.appendChild(info); bar.appendChild(dbtn); bar.appendChild(cbtn);
+                threadList.appendChild(bar);
+            }
+            items.forEach(item => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'thread-item' + (item.id === currentThreadId ? ' active' : '');
+                if (batchMode && batchSet.has(item.id)) wrapper.style.borderColor = '#111';
+                const main = document.createElement('div');
+                main.style.minWidth = '0';
+                const title = document.createElement('div');
+                title.className = 'title';
+                title.textContent = item.title || '新会话';
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                meta.textContent = new Date(item.updatedAt || item.createdAt || Date.now()).toLocaleString();
+                main.appendChild(title);
+                main.appendChild(meta);
+                const actions = document.createElement('div');
+                actions.className = 'thread-actions';
+                if (batchMode) {
+                    var cb = document.createElement('input');
+                    cb.type = 'checkbox'; cb.checked = batchSet.has(item.id);
+                    cb.style.cssText = 'width:18px;height:18px;cursor:pointer;';
+                    cb.onchange = function() { if (cb.checked) batchSet.add(item.id); else batchSet.delete(item.id); renderThreadList(); };
+                    actions.appendChild(cb);
+                } else {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.type = 'button'; deleteBtn.className = 'thread-delete'; deleteBtn.textContent = '删除';
+                    deleteBtn.addEventListener('click', function(e) { e.stopPropagation(); window.showConfirm('确认操作', '确认删除这个聊天窗口吗？', function() { deleteThread(item.id); }); });
+                    actions.appendChild(deleteBtn);
+                }
+                wrapper.appendChild(main);
+                wrapper.appendChild(actions);
+                wrapper.addEventListener('click', function() { if (!batchMode) switchThread(item.id); });
+                threadList.appendChild(wrapper);
+            });
+        }
+
+        function normalizeLoadedMessages(items) {
+            const result = [];
+            let fallbackPair = 0;
+            let pendingUser = null;
+            (items || []).forEach((item, index) => {
+                if (item && item.pairId) {
+                    result.push(item);
+                    return;
+                }
+                if (item && item.role === 'user') {
+                    pendingUser = 'pair-' + (++fallbackPair) + '-' + index;
+                    result.push(Object.assign({pairId: pendingUser, id: item.id || ('msg-' + index)}, item));
+                    return;
+                }
+                if (item && item.role === 'bot') {
+                    const pairId = pendingUser || ('pair-' + (++fallbackPair) + '-' + index);
+                    result.push(Object.assign({pairId: pairId, id: item.id || ('msg-' + index)}, item));
+                    pendingUser = null;
+                    return;
+                }
+                result.push(item);
+            });
+            return result;
+        }
+
+        function saveHistory() {
+            const items = Array.from(chat.querySelectorAll('.msg')).map(node => ({
+                id: node.dataset.id || '',
+                pairId: node.dataset.pairId || '',
+                role: node.classList.contains('user') ? 'user' : 'bot',
+                text: node.dataset.text || '',
+                html: node.dataset.html || '',
+                images: node.dataset.images ? JSON.parse(node.dataset.images) : [],
+                image: node.dataset.image || '',
+                error: node.classList.contains('error')
+            }));
+            localStorage.setItem(threadMessagesKey(currentThreadId), JSON.stringify(items));
+            const currentThread = loadThreads().find(item => item.id === currentThreadId);
+            updateThreadMeta(currentThreadId, {title: currentThread ? currentThread.title : '新会话'});
+        }
+
+        function loadHistory() {
+            try {
+                const items = normalizeLoadedMessages(JSON.parse(localStorage.getItem(threadMessagesKey(currentThreadId)) || '[]'));
+                localStorage.setItem(threadMessagesKey(currentThreadId), JSON.stringify(items));
+                items.forEach(item => renderMsg(item.role, item.text, false, !!item.error, item.images || (item.image ? [item.image] : []), item.id, item.pairId, item.html || ''));
+            } catch (e) {
+                localStorage.removeItem(threadMessagesKey(currentThreadId));
+            }
+        }
+
+        function buildLegacyAnswerHtml(text, images) {
+            let html = '';
+            if (text) {
+                html += `<p>${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</p>`;
+            }
+            (images || []).forEach(src => {
+                if (!src) return;
+                html += `<img src="${String(src).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" alt="附件图片">`;
+            });
+            return html;
+        }
+
+        function renderMsg(role, text, persist = true, error = false, images = [], id = '', pairId = '', html = '') {
+            const div = document.createElement('div');
+            div.className = 'msg ' + role + (error ? ' error' : '');
+            div.dataset.id = id || ('msg-' + Date.now() + Math.random().toString(16).slice(2));
+            div.dataset.pairId = pairId || div.dataset.id;
+            div.dataset.text = text;
+            div.dataset.images = JSON.stringify(images || []);
+            div.dataset.image = images && images.length ? images[0] : '';
+            const renderedHtml = role === 'bot' ? (html || buildLegacyAnswerHtml(text, images)) : '';
+            div.dataset.html = renderedHtml;
+            const prefix = document.createElement('span');
+            prefix.textContent = (role === 'user' ? '你：' : '系统：');
+            div.appendChild(prefix);
+            const content = document.createElement('div');
+            content.className = 'msg-content';
+            if (role === 'bot') {
+                content.innerHTML = renderedHtml;
+            } else {
+                content.textContent = text;
+            }
+            div.appendChild(content);
+            if (role === 'user') {
+                const actions = document.createElement('div');
+                actions.className = 'msg-actions';
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'msg-delete';
+                deleteBtn.textContent = '删除这条问题';
+                deleteBtn.addEventListener('click', () => deleteTurn(div.dataset.pairId));
+                actions.appendChild(deleteBtn);
+                div.appendChild(actions);
+            }
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+            if (persist) saveHistory();
+        }
+
+        function deleteTurn(pairId) {
+            if (!pairId) return;
+            const items = normalizeLoadedMessages(JSON.parse(localStorage.getItem(threadMessagesKey(currentThreadId)) || '[]'));
+            const filtered = items.filter(item => item.pairId !== pairId);
+            localStorage.setItem(threadMessagesKey(currentThreadId), JSON.stringify(filtered));
+            clearChatView();
+            filtered.forEach(item => renderMsg(item.role, item.text, false, !!item.error, item.images || (item.image ? [item.image] : []), item.id, item.pairId, item.html || ''));
+            saveHistory();
+        }
+
+        function renameThreadIfNeeded(threadId, text) {
+            const items = loadThreads();
+            const existing = items.find(item => item.id === threadId);
+            if (!existing) return;
+            if (!existing.title || existing.title === '新会话') {
+                existing.title = text.length > 16 ? text.slice(0, 16) + '…' : text;
+                existing.updatedAt = Date.now();
+                saveThreads(items);
+            }
+        }
+
+        function clearChatView() { chat.innerHTML = ''; }
+        function switchThread(threadId) { currentThreadId = threadId; persistCurrentThread(threadId); clearChatView(); renderThreadList(); loadHistory(); }
+        function startNewThread() {
+            const threadId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('t' + Date.now() + Math.random().toString(16).slice(2));
+            ensureThread(threadId, '新会话');
+            currentThreadId = threadId;
+            persistCurrentThread(currentThreadId);
+            clearChatView();
+            renderThreadList();
+            loadHistory();
+        }
+
+        persistCurrentThread(currentThreadId);
+        ensureThread(currentThreadId, '新会话');
+        renderThreadList();
+        loadHistory();
+        document.getElementById('newThreadBtn').addEventListener('click', startNewThread);
+        var batchBtn = document.getElementById('batchToggleBtn');
+        if (batchBtn) batchBtn.addEventListener('click', toggleBatch);
+        document.getElementById('askForm').addEventListener('submit', async function(e){
+            e.preventDefault();
+            const input = document.getElementById('question');
+            const q = input.value.trim();
+            if (!q) return;
+            const pairId = 'pair-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+            renderMsg('user', q, true, false, [], 'msg-' + pairId, pairId);
+            renameThreadIfNeeded(currentThreadId, q);
+            renderThreadList();
+            input.value = '';
+            try {
+                const resp = await fetch("{{ url_for('chat') }}", {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json', 'X-CSRFToken': '{{ csrf_token_value }}'},
+                    body: JSON.stringify({question: q})
+                });
+                const data = await resp.json();
+                if (resp.status === 200) {
+                    renderMsg('bot', data.answer || '暂无回答', true, false, data.images || (data.image ? [data.image] : []), 'msg-' + pairId + '-bot', pairId, data.answer_html || '');
+                } else {
+                    renderMsg('bot', data.answer || '无匹配答案', true, true, [], 'msg-' + pairId + '-bot', pairId);
+                }
+            } catch (e) {
+                renderMsg('bot', '网络错误', true, true, [], 'msg-' + pairId + '-bot', pairId);
+            }
+        });
+
+    </script>
+    {% include '_mobile_nav.html' %}
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <button class="thread-toggle-btn" id="threadToggleBtn" type="button">☰</button>
+    <script>
+    (function(){
+        var btn = document.getElementById('threadToggleBtn');
+        var panel = document.querySelector('.thread-panel');
+        if (!btn || !panel || window.innerWidth > 900) return;
+        btn.onclick = function() { panel.classList.toggle('show'); };
+        document.addEventListener('click', function(e) {
+            if (panel.classList.contains('show') && !panel.contains(e.target) && e.target !== btn) {
+                panel.classList.remove('show');
+            }
+        });
+    })();
+    </script>
+
+</body>
+</html>

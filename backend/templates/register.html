@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>注册 - 服务智能问答系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}?v=2">
+    <style>
+        body { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .auth-shell { width: 100%; max-width: 440px; }
+        .auth-card { background: var(--panel); border: 1px solid var(--panel-border); box-shadow: var(--shadow); border-radius: 28px; padding: 28px; backdrop-filter: blur(10px); }
+        .auth-header { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 22px; text-align: center; }
+        .auth-brand { display: inline-flex; width: fit-content; max-width: 100%; min-height: 0; padding: 6px; border-radius: 24px; background: transparent; border: 0; align-items: center; justify-content: center; overflow: visible; margin: 0 auto; }
+        .brand-inner { background: #fff; padding: 14px; border-radius: 14px; border: 1px solid rgba(148,163,184,0.12); box-shadow: inset 0 1px 0 rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; }
+        .brand-inner img { width: auto; max-width: 180px; max-height: 72px; object-fit: contain; display: block; }
+        .auth-header h1 { margin: 0; font-size: 24px; }
+        .auth-header .meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
+        .auth-copy { margin-bottom: 18px; color: var(--muted); line-height: 1.7; }
+        .auth-form { display: grid; gap: 12px; }
+        .auth-form input, .auth-form select { width: 100%; padding: 14px 16px; font-size: 15px; }
+        .tenant-note { margin-top: -4px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+        .auth-form button { width: 100%; padding: 14px 16px; border: 0; border-radius: 14px; font-weight: 700; color: #fff; background: var(--primary); cursor: pointer; }
+        .auth-link { display: block; text-align: center; margin-top: 14px; color: var(--primary-dark); text-decoration: none; font-weight: 600; }
+        .auth-link:hover { text-decoration: underline; }
+        #reg_msg { margin-top: 12px; color: var(--accent); min-height: 1.4em; }
+    </style>
+</head>
+<body>
+    <div class="auth-shell">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-brand">
+                    <div class="brand-inner">
+                        <img src="{{ url_for('static', filename='logo.png') }}" alt="服务智能问答系统">
+                    </div>
+                </div>
+                <div>
+                    <h1>申请账号</h1>
+                    <div class="meta">由公司管理员审核或预先分配</div>
+                </div>
+            </div>
+            <div class="auth-copy">客户与员工账号都需要经过管理员批准后才能使用。</div>
+            <form onsubmit="return register(event)" class="auth-form">
+                <input type="text" id="reg_username" placeholder="用户名" required>
+                <input type="password" id="reg_password" placeholder="密码" required>
+                <div class="muted" style="font-size: 12px; line-height: 1.5;">密码需至少 8 位，并同时包含字母和数字。</div>
+                <select id="reg_role">
+                    <option value="customer">客户</option>
+                    <option value="employee">员工</option>
+                </select>
+                <select id="reg_tenant">
+                    {% for tenant in tenants %}
+                    <option value="{{ tenant.id }}" {% if tenant.id == default_tenant_id %}selected{% endif %}>{{ tenant.name }}</option>
+                    {% endfor %}
+                </select>
+                <div class="tenant-note">请选择你要注册进入的租户，公司之间的数据、审核和知识库彼此隔离。</div>
+                <button type="submit">注册</button>
+            </form>
+            <p id="reg_msg"></p>
+            <a class="auth-link" href="{{ url_for('login') }}">已有账号？登录</a>
+        </div>
+    </div>
+    <script>
+        function register(e) {
+            e.preventDefault();
+            var u = document.getElementById('reg_username').value.trim();
+            var p = document.getElementById('reg_password').value;
+            var r = document.getElementById('reg_role').value;
+            var t = document.getElementById('reg_tenant').value;
+            if (!u || !p) return;
+            fetch("{{ url_for('register') }}", {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token_value }}'},
+                body: JSON.stringify({username: u, password: p, role: r, tenant_id: t})
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('reg_msg').textContent = data.message;
+                if (data.status === 'ok') {
+                    setTimeout(function(){ window.location.href="{{ url_for('login') }}"; }, 1500);
+                }
+            });
+            return false;
+        }
+    </script>
+</body>
+</html>
